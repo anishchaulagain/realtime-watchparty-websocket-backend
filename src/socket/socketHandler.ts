@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { generateRandomName } from '../utils/nameGenerator';
 
 interface RoomState {
     isPlaying: boolean;
@@ -14,13 +15,27 @@ interface RoomState {
 // strictly we should use a shared store or Redis.
 import { rooms } from '../controllers/roomController'; // Shared in-memory store
 
+const users: Record<string, string> = {}; // socket.id -> username
+
 export const setupSocket = (io: Server) => {
     io.on('connection', (socket: Socket) => {
         console.log('User connected:', socket.id);
 
         socket.on('join_room', (roomId: string) => {
             socket.join(roomId);
-            console.log(`User ${socket.id} joined room ${roomId}`);
+            const username = generateRandomName();
+            users[socket.id] = username;
+
+            console.log(`User ${socket.id} (${username}) joined room ${roomId}`);
+
+            // Notify user of their name
+            socket.emit('your_name', username);
+
+            // Notify room
+            socket.to(roomId).emit('receive_message', {
+                type: 'system',
+                text: `${username} joined the room`
+            });
 
             // Send current room state to user
             const room = rooms[roomId];
@@ -30,6 +45,16 @@ export const setupSocket = (io: Server) => {
                     ...room
                 });
             }
+        });
+
+        socket.on('send_message', (data: { roomId: string, text: string }) => {
+            const username = users[socket.id] || 'Unknown';
+            io.to(data.roomId).emit('receive_message', {
+                type: 'user',
+                user: username,
+                text: data.text,
+                timestamp: Date.now()
+            });
         });
 
         socket.on('update_state', (data: { roomId: string, type: string, currentTime: number, isPlaying: boolean, playbackRate: number, videoSource?: string, videoType?: 'url' | 'upload' }) => {
@@ -73,7 +98,17 @@ export const setupSocket = (io: Server) => {
         });
 
         socket.on('disconnect', () => {
-            console.log('User disconnected:', socket.id);
+            const username = users[socket.id];
+            if (username) {
+                // We don't have roomId easily here unless we track it in `users`, 
+                // but for now let's just log. To broadcast leave, we need map socket.id -> roomId too.
+                // Simple fix for MVP: just log. 
+                // If we want to broadcast leave:
+                // io.emit('receive_message', ... ) but we don't know which room.
+                // Let's skip leave message for now or implement socket->room map.
+                console.log(`User ${username} disconnected`);
+                delete users[socket.id];
+            }
         });
     });
 };
