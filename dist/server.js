@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001;
 const server = http_1.default.createServer(app_1.default);
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: '*', // Allow all for MVP, restrict in prod
+        origin: '*',
         methods: ['GET', 'POST']
     }
 });
