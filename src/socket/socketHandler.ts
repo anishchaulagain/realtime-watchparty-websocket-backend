@@ -16,6 +16,7 @@ interface RoomState {
 import { rooms } from '../controllers/roomController'; // Shared in-memory store
 
 const users: Record<string, string> = {}; // socket.id -> username
+const socketRoom: Record<string, string> = {}; // socket.id -> roomId
 
 export const setupSocket = (io: Server) => {
     io.on('connection', (socket: Socket) => {
@@ -25,6 +26,7 @@ export const setupSocket = (io: Server) => {
             socket.join(roomId);
             const username = generateRandomName();
             users[socket.id] = username;
+            socketRoom[socket.id] = roomId;
 
             console.log(`User ${socket.id} (${username}) joined room ${roomId}`);
 
@@ -99,15 +101,19 @@ export const setupSocket = (io: Server) => {
 
         socket.on('disconnect', () => {
             const username = users[socket.id];
-            if (username) {
-                // We don't have roomId easily here unless we track it in `users`, 
-                // but for now let's just log. To broadcast leave, we need map socket.id -> roomId too.
-                // Simple fix for MVP: just log. 
-                // If we want to broadcast leave:
-                // io.emit('receive_message', ... ) but we don't know which room.
-                // Let's skip leave message for now or implement socket->room map.
-                console.log(`User ${username} disconnected`);
+            const roomId = socketRoom[socket.id];
+
+            if (username && roomId) {
+                console.log(`User ${username} disconnected from room ${roomId}`);
+
+                // Notify room
+                socket.to(roomId).emit('receive_message', {
+                    type: 'system',
+                    text: `${username} left the room`
+                });
+
                 delete users[socket.id];
+                delete socketRoom[socket.id];
             }
         });
     });
