@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Main Routes
 app.use('/api/rooms', roomRouter);
 app.use('/api/upload', uploadRouter);
 
