@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { generateRandomName } from '../utils/nameGenerator';
 
 interface RoomState {
     isPlaying: boolean;
@@ -14,13 +15,29 @@ interface RoomState {
 // strictly we should use a shared store or Redis.
 import { rooms } from '../controllers/roomController'; // Shared in-memory store
 
+const users: Record<string, string> = {}; // socket.id -> username
+const socketRoom: Record<string, string> = {}; // socket.id -> roomId
+
 export const setupSocket = (io: Server) => {
     io.on('connection', (socket: Socket) => {
         console.log('User connected:', socket.id);
 
         socket.on('join_room', (roomId: string) => {
             socket.join(roomId);
-            console.log(`User ${socket.id} joined room ${roomId}`);
+            const username = generateRandomName();
+            users[socket.id] = username;
+            socketRoom[socket.id] = roomId;
+
+            console.log(`User ${socket.id} (${username}) joined room ${roomId}`);
+
+            // Notify user of their name
+            socket.emit('your_name', username);
+
+            // Notify room
+            socket.to(roomId).emit('receive_message', {
+                type: 'system',
+                text: `${username} joined the room`
+            });
 
             // Send current room state to user
             const room = rooms[roomId];
@@ -30,6 +47,16 @@ export const setupSocket = (io: Server) => {
                     ...room
                 });
             }
+        });
+
+        socket.on('send_message', (data: { roomId: string, text: string }) => {
+            const username = users[socket.id] || 'Unknown';
+            io.to(data.roomId).emit('receive_message', {
+                type: 'user',
+                user: username,
+                text: data.text,
+                timestamp: Date.now()
+            });
         });
 
         socket.on('update_state', (data: { roomId: string, type: string, currentTime: number, isPlaying: boolean, playbackRate: number, videoSource?: string, videoType?: 'url' | 'upload' }) => {
@@ -73,7 +100,21 @@ export const setupSocket = (io: Server) => {
         });
 
         socket.on('disconnect', () => {
-            console.log('User disconnected:', socket.id);
+            const username = users[socket.id];
+            const roomId = socketRoom[socket.id];
+
+            if (username && roomId) {
+                console.log(`User ${username} disconnected from room ${roomId}`);
+
+                // Notify room
+                socket.to(roomId).emit('receive_message', {
+                    type: 'system',
+                    text: `${username} left the room`
+                });
+
+                delete users[socket.id];
+                delete socketRoom[socket.id];
+            }
         });
     });
 };
