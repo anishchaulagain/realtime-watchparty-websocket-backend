@@ -10,7 +10,7 @@ const uploadController_1 = require("./controllers/uploadController");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-// Routes
+// Main Routes
 app.use('/api/rooms', roomController_1.roomRouter);
 app.use('/api/upload', uploadController_1.uploadRouter);
 app.get('/health', (req, res) => {
