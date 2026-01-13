@@ -23,6 +23,12 @@ export const setupSocket = (io: Server) => {
         console.log('User connected:', socket.id);
 
         socket.on('join_room', (roomId: string) => {
+            // Validate room existence
+            if (!rooms[roomId]) {
+                socket.emit('error', 'Room not found');
+                return;
+            }
+
             socket.join(roomId);
             const username = generateRandomName();
             users[socket.id] = username;
@@ -114,6 +120,16 @@ export const setupSocket = (io: Server) => {
 
                 delete users[socket.id];
                 delete socketRoom[socket.id];
+
+                // Auto-destruction logic
+                const roomSockets = io.sockets.adapter.rooms.get(roomId);
+                if (!roomSockets || roomSockets.size === 0) {
+                    // Check if room still exists in store (it should)
+                    if (rooms[roomId]) {
+                        console.log(`Room ${roomId} is empty. Destroying...`);
+                        delete rooms[roomId];
+                    }
+                }
             }
         });
     });
