@@ -12,6 +12,11 @@ const setupSocket = (io) => {
     io.on('connection', (socket) => {
         console.log('User connected:', socket.id);
         socket.on('join_room', (roomId) => {
+            // Validate room existence
+            if (!roomController_1.rooms[roomId]) {
+                socket.emit('error', 'Room not found');
+                return;
+            }
             socket.join(roomId);
             const username = (0, nameGenerator_1.generateRandomName)();
             users[socket.id] = username;
@@ -90,6 +95,15 @@ const setupSocket = (io) => {
                 });
                 delete users[socket.id];
                 delete socketRoom[socket.id];
+                // Auto-destruction logic
+                const roomSockets = io.sockets.adapter.rooms.get(roomId);
+                if (!roomSockets || roomSockets.size === 0) {
+                    // Check if room still exists in store (it should)
+                    if (roomController_1.rooms[roomId]) {
+                        console.log(`Room ${roomId} is empty. Destroying...`);
+                        delete roomController_1.rooms[roomId];
+                    }
+                }
             }
         });
     });
