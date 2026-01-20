@@ -2,6 +2,7 @@ import { S3Client, ListBucketsCommand, PutObjectCommand } from '@aws-sdk/client-
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
 import path from 'path';
+//this is test script for R2 upload config
 
 // Load .env from backend root
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
