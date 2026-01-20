@@ -14,6 +14,7 @@ app.use(express_1.default.json());
 app.use('/api/rooms', roomController_1.roomRouter);
 app.use('/api/upload', uploadController_1.uploadRouter);
 app.get('/health', (req, res) => {
+    console.log('heartbeat request');
     res.status(200).json({ status: 'ok' });
 });
 exports.default = app;

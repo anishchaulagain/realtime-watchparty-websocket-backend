@@ -12,10 +12,17 @@ const setupSocket = (io) => {
     io.on('connection', (socket) => {
         console.log('User connected:', socket.id);
         socket.on('join_room', (roomId) => {
-            // Validate room existence
+            // Validate room existence - or lazily create it to handle server restarts
             if (!roomController_1.rooms[roomId]) {
-                socket.emit('error', 'Room not found');
-                return;
+                console.log(`Room ${roomId} not found during join. Creating...`);
+                roomController_1.rooms[roomId] = {
+                    id: roomId,
+                    createdAt: Date.now(),
+                    videoSource: null,
+                    isPlaying: false,
+                    currentTime: 0,
+                    lastUpdated: Date.now()
+                };
             }
             socket.join(roomId);
             const username = (0, nameGenerator_1.generateRandomName)();
@@ -86,14 +93,10 @@ const setupSocket = (io) => {
         // Heartbeat to keep server alive
         socket.on('ping', (data) => {
             if (roomController_1.rooms[data.roomId]) {
+                console.log('heartbeat request (socket)');
                 roomController_1.rooms[data.roomId].lastUpdated = Date.now();
                 // Respond back to client
                 socket.emit('pong', { success: true, timestamp: Date.now() });
-                // Optional: Notify room about the sync if it was close to idling
-                // For now, just keep it silent to avoid chat spam, 
-                // but user asked to "show this updated in room frontend".
-                // We'll send a system message if it's been a while? 
-                // Or just every few minutes.
             }
         });
         socket.on('disconnect', () => {

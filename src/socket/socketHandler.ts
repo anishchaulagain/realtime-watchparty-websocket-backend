@@ -23,10 +23,17 @@ export const setupSocket = (io: Server) => {
         console.log('User connected:', socket.id);
 
         socket.on('join_room', (roomId: string) => {
-            // Validate room existence
+            // Validate room existence - or lazily create it to handle server restarts
             if (!rooms[roomId]) {
-                socket.emit('error', 'Room not found');
-                return;
+                console.log(`Room ${roomId} not found during join. Creating...`);
+                rooms[roomId] = {
+                    id: roomId,
+                    createdAt: Date.now(),
+                    videoSource: null,
+                    isPlaying: false,
+                    currentTime: 0,
+                    lastUpdated: Date.now()
+                };
             }
 
             socket.join(roomId);
@@ -108,6 +115,7 @@ export const setupSocket = (io: Server) => {
         // Heartbeat to keep server alive
         socket.on('ping', (data: { roomId: string, timestamp: number }) => {
             if (rooms[data.roomId]) {
+                console.log('heartbeat request (socket)');
                 rooms[data.roomId].lastUpdated = Date.now();
                 // Respond back to client
                 socket.emit('pong', { success: true, timestamp: Date.now() });
