@@ -13,6 +13,7 @@ app.use('/api/rooms', roomRouter);
 app.use('/api/upload', uploadRouter);
 
 app.get('/health', (req, res) => {
+    console.log('heartbeat request');
     res.status(200).json({ status: 'ok' });
 });
 
