@@ -14,7 +14,7 @@ exports.roomRouter.post('/create', (req, res) => {
         videoSource: null,
         isPlaying: false,
         currentTime: 0,
-        lastUpdate: Date.now()
+        lastUpdated: Date.now()
     };
     res.json({ roomId });
 });

@@ -83,6 +83,19 @@ const setupSocket = (io) => {
                 roomController_1.rooms[data.roomId].lastUpdated = Date.now();
             }
         });
+        // Heartbeat to keep server alive
+        socket.on('ping', (data) => {
+            if (roomController_1.rooms[data.roomId]) {
+                roomController_1.rooms[data.roomId].lastUpdated = Date.now();
+                // Respond back to client
+                socket.emit('pong', { success: true, timestamp: Date.now() });
+                // Optional: Notify room about the sync if it was close to idling
+                // For now, just keep it silent to avoid chat spam, 
+                // but user asked to "show this updated in room frontend".
+                // We'll send a system message if it's been a while? 
+                // Or just every few minutes.
+            }
+        });
         socket.on('disconnect', () => {
             const username = users[socket.id];
             const roomId = socketRoom[socket.id];

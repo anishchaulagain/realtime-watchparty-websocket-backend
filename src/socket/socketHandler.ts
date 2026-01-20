@@ -105,6 +105,15 @@ export const setupSocket = (io: Server) => {
             }
         });
 
+        // Heartbeat to keep server alive
+        socket.on('ping', (data: { roomId: string, timestamp: number }) => {
+            if (rooms[data.roomId]) {
+                rooms[data.roomId].lastUpdated = Date.now();
+                // Respond back to client
+                socket.emit('pong', { success: true, timestamp: Date.now() });
+            }
+        });
+
         socket.on('disconnect', () => {
             const username = users[socket.id];
             const roomId = socketRoom[socket.id];
